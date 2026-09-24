@@ -1,80 +1,35 @@
-const WHATSAPP_NUMBER = "919038614052"; // Change this if your A1 MART WhatsApp number is different.
-
-const products = [
-  {code:"A1001", name:"Multipurpose Kitchen Organizer", price:299, cat:"Home & Kitchen", icon:"🧺"},
-  {code:"A1002", name:"Handy Storage Box", price:249, cat:"Home & Kitchen", icon:"📦"},
-  {code:"A1003", name:"Cleaning Brush Set", price:199, cat:"Home & Kitchen", icon:"🧹"},
-  {code:"A1004", name:"Reusable Water Bottle", price:249, cat:"Daily Use", icon:"🧴"},
-  {code:"A1005", name:"Daily Utility Basket", price:229, cat:"Daily Use", icon:"🛍️"},
-  {code:"A1006", name:"Home Cleaning Gloves", price:149, cat:"Home & Kitchen", icon:"🧤"},
-  {code:"A1007", name:"Foldable Shopping Bag", price:129, cat:"Daily Use", icon:"👜"},
-  {code:"A1008", name:"Decorative Plant Pot", price:199, cat:"Home & Kitchen", icon:"🪴"}
+const WHATSAPP_NUMBER = "919038614052";
+const ADMIN_PASSWORD = "A1@2026"; // Change this before publishing if you want a different password.
+const DEFAULT_PRODUCTS = [
+ {code:"A1001",name:"Multipurpose Kitchen Organizer",price:299,cat:"Home & Kitchen",desc:"Useful organizer for everyday kitchen storage.",image:""},
+ {code:"A1002",name:"Handy Storage Box",price:249,cat:"Home & Kitchen",desc:"Compact storage for home essentials.",image:""},
+ {code:"A1003",name:"Cleaning Brush Set",price:199,cat:"Home & Kitchen",desc:"Practical brushes for everyday cleaning.",image:""},
+ {code:"A1004",name:"Reusable Water Bottle",price:249,cat:"Daily Use",desc:"Reusable bottle for everyday use.",image:""},
+ {code:"A1005",name:"Daily Utility Basket",price:229,cat:"Daily Use",desc:"Useful basket for everyday items.",image:""},
+ {code:"A1006",name:"Home Cleaning Gloves",price:149,cat:"Home & Kitchen",desc:"Comfortable gloves for household cleaning.",image:""},
+ {code:"A1007",name:"Foldable Shopping Bag",price:129,cat:"Daily Use",desc:"Reusable and easy to carry.",image:""},
+ {code:"A1008",name:"Decorative Plant Pot",price:199,cat:"Plants",desc:"Simple pot for decorative plants.",image:""}
 ];
-
-let cart = [];
-
-function money(n){ return "₹" + n.toLocaleString("en-IN"); }
-
-function renderProducts(list=products){
-  const grid=document.getElementById("productGrid");
-  grid.innerHTML=list.map(p=>`
-    <article class="product">
-      <div class="product-img">${p.icon}</div>
-      <div class="product-body">
-        <div class="product-code">ITEM CODE: ${p.code}</div>
-        <h3>${p.name}</h3>
-        <div class="product-cat">${p.cat}</div>
-        <div class="price">${money(p.price)}</div>
-        <button class="add" onclick="addToCart('${p.code}')">Add to Cart</button>
-      </div>
-    </article>`).join("");
-}
-
-function filterProducts(cat){
-  document.getElementById("categoryFilter").value=cat;
-  renderProducts(cat==="All" ? products : products.filter(p=>p.cat===cat));
-  document.getElementById("products").scrollIntoView({behavior:"smooth"});
-}
-
-function addToCart(code){
-  const p=products.find(x=>x.code===code);
-  const item=cart.find(x=>x.code===code);
-  if(item) item.qty++;
-  else cart.push({...p,qty:1});
-  updateCart();
-}
-
-function removeFromCart(code){
-  cart=cart.filter(x=>x.code!==code);
-  updateCart();
-}
-
-function updateCart(){
-  const count = cart.reduce((a,x)=>a+x.qty,0);
-  document.getElementById("cartCount").textContent=count;
-  const mobileCount=document.getElementById("cartCountMobile");
-  if(mobileCount) mobileCount.textContent=count;
-  const box=document.getElementById("cartItems");
-  if(!cart.length){box.innerHTML='<div class="empty">Your cart is empty.</div>';document.getElementById("cartTotal").textContent="₹0";return;}
-  box.innerHTML=cart.map(x=>`
-    <div class="cart-row">
-      <div><b>${x.name}</b><br><small>${x.code} × ${x.qty}</small></div>
-      <div><b>${money(x.price*x.qty)}</b><br><button class="remove" onclick="removeFromCart('${x.code}')">Remove</button></div>
-    </div>`).join("");
-  document.getElementById("cartTotal").textContent=money(cart.reduce((a,x)=>a+x.price*x.qty,0));
-}
-
-function openCart(){document.getElementById("cartModal").classList.add("show");updateCart();}
-function closeCart(e){if(!e || e.target.id==="cartModal")document.getElementById("cartModal").classList.remove("show");}
-
-function orderOnWhatsApp(){
-  if(!cart.length){alert("Please add a product first.");return;}
-  let msg="Hello A1 MART! I want to place an order:%0A%0A";
-  cart.forEach(x=>msg+=`• ${x.name} (${x.code}) × ${x.qty} = ${money(x.price*x.qty)}%0A`);
-  const total=cart.reduce((a,x)=>a+x.price*x.qty,0);
-  msg+=`%0A*Total: ${money(total)}*%0A%0AName:%0AAddress:%0APhone:`;
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`,"_blank");
-}
-
-renderProducts();
-updateCart();
+let products = loadProducts(); let cart=[]; let adminLoggedIn=false;
+function loadProducts(){try{const s=localStorage.getItem('a1mart_products');return s?JSON.parse(s):DEFAULT_PRODUCTS.map(x=>({...x}));}catch(e){return DEFAULT_PRODUCTS.map(x=>({...x}));}}
+function persistProducts(){localStorage.setItem('a1mart_products',JSON.stringify(products));}
+function money(n){return '₹'+Number(n).toLocaleString('en-IN');}
+function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function renderProducts(list=products){const grid=document.getElementById('productGrid');if(!list.length){grid.innerHTML='<div class="no-products">No products found.</div>';return;}grid.innerHTML=list.map(p=>`<article class="product"><div class="product-img">${p.image?`<img src="${p.image}" alt="${escapeHtml(p.name)}">`:'<span>No Image</span>'}</div><div class="product-body"><div class="product-code">ITEM CODE: ${escapeHtml(p.code)}</div><h3>${escapeHtml(p.name)}</h3><div class="product-cat">${escapeHtml(p.cat)}</div>${p.desc?`<p class="product-desc">${escapeHtml(p.desc)}</p>`:''}<div class="price">${money(p.price)}</div><button class="add" onclick="addToCart('${escapeHtml(p.code)}')">Add to Cart</button></div></article>`).join('');}
+function filterProducts(cat){document.getElementById('categoryFilter').value=cat;const list=cat==='All'?products:products.filter(p=>p.cat===cat);renderProducts(list);document.getElementById('products').scrollIntoView({behavior:'smooth'});}
+function searchProducts(q){const term=q.trim().toLowerCase();renderProducts(term?products.filter(p=>(p.name+' '+p.code+' '+p.cat+' '+(p.desc||'')).toLowerCase().includes(term)):products);}
+function focusSearch(){document.getElementById('products').scrollIntoView({behavior:'smooth'});setTimeout(()=>document.getElementById('searchInput').focus(),400);}
+function addToCart(code){const p=products.find(x=>x.code===code);if(!p)return;const item=cart.find(x=>x.code===code);if(item)item.qty++;else cart.push({...p,qty:1});updateCart();}
+function removeFromCart(code){cart=cart.filter(x=>x.code!==code);updateCart();}
+function updateCart(){const count=cart.reduce((a,x)=>a+x.qty,0);document.getElementById('cartCount').textContent=count;document.getElementById('cartCountMobile').textContent=count;const box=document.getElementById('cartItems');if(!cart.length){box.innerHTML='<div class="empty">Your cart is empty.</div>';document.getElementById('cartTotal').textContent='₹0';return;}box.innerHTML=cart.map(x=>`<div class="cart-row"><div><b>${escapeHtml(x.name)}</b><br><small>${escapeHtml(x.code)} × ${x.qty}</small></div><div><b>${money(x.price*x.qty)}</b><br><button class="remove" onclick="removeFromCart('${escapeHtml(x.code)}')">Remove</button></div></div>`).join('');document.getElementById('cartTotal').textContent=money(cart.reduce((a,x)=>a+x.price*x.qty,0));}
+function openCart(){document.getElementById('cartModal').classList.add('show');updateCart();}function closeCart(e){if(!e||e.target.id==='cartModal')document.getElementById('cartModal').classList.remove('show');}
+function orderOnWhatsApp(){if(!cart.length){alert('Please add a product first.');return;}let msg='Hello A1 MART! I want to place an order:\n\n';cart.forEach(x=>msg+=`• ${x.name} (${x.code}) × ${x.qty} = ${money(x.price*x.qty)}\n`);const total=cart.reduce((a,x)=>a+x.price*x.qty,0);msg+=`\nTotal: ${money(total)}\n\nName:\nAddress:\nPhone:`;window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank');}
+function openAdmin(){document.getElementById('adminModal').classList.add('show');if(adminLoggedIn){document.getElementById('adminLogin').classList.add('hidden');document.getElementById('adminContent').classList.remove('hidden');renderAdminList();}}
+function closeAdmin(e){if(!e||e.target.id==='adminModal')document.getElementById('adminModal').classList.remove('show');}
+function loginAdmin(){if(document.getElementById('adminPassword').value===ADMIN_PASSWORD){adminLoggedIn=true;document.getElementById('adminLogin').classList.add('hidden');document.getElementById('adminContent').classList.remove('hidden');renderAdminList();}else document.getElementById('loginError').textContent='Wrong password.';}
+function renderAdminList(){document.getElementById('adminList').innerHTML=products.map(p=>`<div class="admin-row"><div><b>${escapeHtml(p.name)}</b><small>${escapeHtml(p.code)} • ${money(p.price)} • ${escapeHtml(p.cat)}</small></div><div><button onclick="editProduct('${escapeHtml(p.code)}')">Edit</button><button class="danger" onclick="deleteProduct('${escapeHtml(p.code)}')">Delete</button></div></div>`).join('');}
+function resetProductForm(){document.getElementById('productForm').reset();document.getElementById('editCode').value='';}
+function editProduct(code){const p=products.find(x=>x.code===code);if(!p)return;document.getElementById('editCode').value=p.code;document.getElementById('pName').value=p.name;document.getElementById('pCode').value=p.code;document.getElementById('pPrice').value=p.price;document.getElementById('pCat').value=p.cat;document.getElementById('pDesc').value=p.desc||'';document.getElementById('pImage').value='';window.scrollTo(0,0);}
+function deleteProduct(code){if(!confirm('Delete this product?'))return;products=products.filter(p=>p.code!==code);persistProducts();renderProducts();renderAdminList();}
+function saveProduct(e){e.preventDefault();const oldCode=document.getElementById('editCode').value;const code=document.getElementById('pCode').value.trim();if(!code)return;const existing=products.find(p=>p.code===code);if(existing&&code!==oldCode){alert('This Item Code already exists. Use another code.');return;}const finish=(image)=>{const item={code,name:document.getElementById('pName').value.trim(),price:Number(document.getElementById('pPrice').value),cat:document.getElementById('pCat').value,desc:document.getElementById('pDesc').value.trim(),image:image||''};if(oldCode){const i=products.findIndex(p=>p.code===oldCode);products[i]=item;}else products.unshift(item);persistProducts();renderProducts();renderAdminList();resetProductForm();alert(oldCode?'Product updated successfully.':'Product added successfully.');};const file=document.getElementById('pImage').files[0];if(file){const r=new FileReader();r.onload=()=>finish(r.result);r.readAsDataURL(file);}else{const old=products.find(p=>p.code===oldCode);finish(old?old.image:'');}}
+renderProducts();updateCart();
